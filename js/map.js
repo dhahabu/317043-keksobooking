@@ -1,5 +1,7 @@
 'use strict';
 
+var NUMBER_OF_ADVERTS = 8
+
 var titles = [
   'Большая уютная квартира',
   'Маленькая неуютная квартира',
@@ -47,7 +49,7 @@ var getRandomNumber = function (min, max) {
 var generateAdverts = function () {
   var adverts = [];
 
-  for (var i = 0; i < 8; i++) {
+  for (var i = 0; i < NUMBER_OF_ADVERTS; i++) {
     var locationX = getRandomNumber(300, 900);
     var locationY = getRandomNumber(150, 500);
 
@@ -82,7 +84,7 @@ var generateAdverts = function () {
 
 var createMapPinsFragment = function (adverts) {
   var mapPinsFragment = document.createDocumentFragment();
-  for (var i = 0; i < 8; i++) {
+  for (var i = 0; i < adverts.length; i++) {
     var mapPinElement = template.querySelector('.map__pin').cloneNode(true);
     mapPinElement.style.left = adverts[i].location.x - mapPinElement.querySelector('img').width / 2 + 'px';
     mapPinElement.style.top = adverts[i].location.y - mapPinElement.querySelector('img').height + 'px';
