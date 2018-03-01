@@ -1,6 +1,14 @@
 'use strict';
 
-var NUMBER_OF_ADVERTS = 8
+var NUMBER_OF_ADVERTS = 8;
+var POINTER_HEIGHT = 22;
+var ESC_KEYCODE = 27;
+
+var template = document.querySelector('template').content;
+var map = document.querySelector('.map');
+var noticeFormFieldset = document.querySelectorAll('.notice__form fieldset');
+var mainPin = document.querySelector('.map__pin--main');
+var inputAddress = document.querySelector('input#address');
 
 var titles = [
   'Большая уютная квартира',
@@ -41,7 +49,6 @@ var mixElements = function (arr) {
   return newArr;
 };
 
-// генерация случайного целого числа от min до max (включительно!)
 var getRandomNumber = function (min, max) {
   return Math.floor(Math.random() * ((max + 1) - min) + min);
 };
@@ -82,16 +89,28 @@ var generateAdverts = function () {
   return adverts;
 };
 
-var createMapPinsFragment = function (adverts) {
-  var mapPinsFragment = document.createDocumentFragment();
+var createPinElement = function (advert) {
+  var pinElement = template.querySelector('.map__pin').cloneNode(true);
+  pinElement.style.left = advert.location.x - pinElement.offsetWidth / 2 + 'px';
+  pinElement.style.top = advert.location.y - pinElement.offsetHeight + 'px';
+  pinElement.querySelector('img').src = advert.author.avatar;
+
+  var pinClickHandler = function () {
+    closePopup();
+    map.insertBefore(createCardElement(advert), document.querySelector('.map__filters-container'));
+  };
+
+  pinElement.addEventListener('click', pinClickHandler);
+
+  return pinElement;
+};
+
+var createPinsFragment = function (adverts) {
+  var pinsFragment = document.createDocumentFragment();
   for (var i = 0; i < adverts.length; i++) {
-    var mapPinElement = template.querySelector('.map__pin').cloneNode(true);
-    mapPinElement.style.left = adverts[i].location.x - mapPinElement.querySelector('img').width / 2 + 'px';
-    mapPinElement.style.top = adverts[i].location.y - mapPinElement.querySelector('img').height + 'px';
-    mapPinElement.querySelector('img').src = adverts[i].author.avatar;
-    mapPinsFragment.appendChild(mapPinElement);
+    pinsFragment.appendChild(createPinElement(adverts[i]));
   }
-  return mapPinsFragment;
+  return pinsFragment;
 };
 
 var createFeaturesFragment = function (advert) {
@@ -134,15 +153,52 @@ var createCardElement = function (advert) {
   cardElement.querySelector('.popup__pictures').replaceChild(createPhotosFragment(advert, cardElement), cardElement.querySelector('.popup__pictures li'));
   cardElement.querySelector('img').src = advert.author.avatar;
 
+  cardElement.querySelector('.popup__close').addEventListener('click', function () {
+    closePopup();
+  });
+
+  document.addEventListener('keydown', popupEscPressHandler);
+
   return cardElement;
+};
+
+var closePopup = function () {
+  var popup = document.querySelector('.popup');
+  if (popup !== null) {
+    map.removeChild(popup);
+    document.removeEventListener('keydown', popupEscPressHandler);
+  }
+};
+
+var mainPinMouseupHandler = function () {
+  if (map.classList.contains('map--faded')) {
+    map.classList.remove('map--faded');
+    document.querySelector('.notice__form').classList.remove('notice__form--disabled');
+
+    for (var j = 0; j < noticeFormFieldset.length; j++) {
+      noticeFormFieldset[j].removeAttribute('disabled');
+    }
+  }
+
+  inputAddress.value = (mainPin.offsetLeft + mainPin.offsetWidth / 2)
+    + ', ' + (mainPin.offsetTop + mainPin.offsetHeight + POINTER_HEIGHT);
+
+  document.querySelector('.map__pins').appendChild(createPinsFragment(adverts));
+};
+
+var popupEscPressHandler = function (evt) {
+  if (evt.keyCode === ESC_KEYCODE) {
+    closePopup();
+  }
 };
 
 var adverts = generateAdverts();
 
-document.querySelector('.map').classList.remove('map--faded');
+for (var i = 0; i < noticeFormFieldset.length; i++) {
+  noticeFormFieldset[i].setAttribute('disabled', 'disabled');
+}
 
-var template = document.querySelector('template').content;
+inputAddress.value = (mainPin.offsetLeft + mainPin.offsetWidth / 2)
+  + ', ' + (mainPin.offsetTop + mainPin.offsetHeight / 2);
 
-document.querySelector('.map__pins').appendChild(createMapPinsFragment(adverts));
-
-document.querySelector('.map').insertBefore(createCardElement(adverts[0]), document.querySelector('.map__filters-container'));
+mainPin.addEventListener('mouseup', mainPinMouseupHandler);
