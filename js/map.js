@@ -8,7 +8,16 @@ var template = document.querySelector('template').content;
 var map = document.querySelector('.map');
 var noticeFormFieldset = document.querySelectorAll('.notice__form fieldset');
 var mainPin = document.querySelector('.map__pin--main');
-var inputAddress = document.querySelector('input#address');
+var noticeForm = document.querySelector('.notice__form');
+var noticeFormTitle = noticeForm.querySelector('#title');
+var noticeFormAddress = noticeForm.querySelector('#address');
+var noticeFormType = noticeForm.querySelector('#type');
+var noticeFormPrice = noticeForm.querySelector('#price');
+var noticeFormTimeIn = noticeForm.querySelector('#timein');
+var noticeFormTimeOut = noticeForm.querySelector('#timeout');
+var noticeFormRoomNumber = noticeForm.querySelector('#room_number');
+var noticeFormCapacity = noticeForm.querySelector('#capacity');
+var capacityOptions = noticeFormCapacity.querySelectorAll('option');
 
 var titles = [
   'Большая уютная квартира',
@@ -21,9 +30,7 @@ var titles = [
   'Неуютное бунгало по колено в воде'
 ];
 
-var types = ['flat', 'house', 'bungalo'];
-
-var typesRu = {
+var types = {
   flat: 'Квартира',
   house: 'Дом',
   bungalo: 'Бунгало'
@@ -38,6 +45,22 @@ var photos = [
   'http://o0.github.io/assets/images/tokyo/hotel2.jpg',
   'http://o0.github.io/assets/images/tokyo/hotel3.jpg'
 ];
+
+var minPrice = {
+  flat: 1000,
+  bungalo: 0,
+  house: 5000,
+  palace: 10000
+};
+
+var deactivatePage = function () {
+  for (var i = 0; i < noticeFormFieldset.length; i++) {
+    noticeFormFieldset[i].disabled = true;
+  }
+
+  noticeFormAddress.value = (mainPin.offsetLeft + mainPin.offsetWidth / 2)
+    + ', ' + (mainPin.offsetTop + mainPin.offsetHeight / 2);
+};
 
 var mixElements = function (arr) {
   var newArr = arr.slice();
@@ -69,7 +92,7 @@ var generateAdverts = function () {
         title: titles[i],
         address: locationX + ', ' + locationY,
         price: getRandomNumber(1000, 1000000),
-        type: types[getRandomNumber(0, types.length - 1)],
+        type: Object.keys(types)[getRandomNumber(0, Object.keys(types).length - 1)],
         rooms: getRandomNumber(1, 5),
         guests: getRandomNumber(1, 10),
         checkin: times[getRandomNumber(0, times.length - 1)],
@@ -143,7 +166,7 @@ var createCardElement = function (advert) {
   cardElement.querySelector('h3').textContent = advert.offer.title;
   cardElement.querySelector('p small').textContent = advert.offer.address;
   cardElement.querySelector('.popup__price').innerHTML = advert.offer.price + ' &#x20bd;/ночь';
-  cardElement.querySelector('h4').textContent = typesRu[advert.offer.type];// сомнительно
+  cardElement.querySelector('h4').textContent = types[advert.offer.type];
   cardElement.querySelector('p:nth-of-type(3)').textContent = advert.offer.rooms
     + ' комнаты для ' + advert.offer.guests + ' гостей';
   cardElement.querySelector('p:nth-of-type(4)').textContent = 'Заезд после '
@@ -175,15 +198,19 @@ var mainPinMouseupHandler = function () {
     map.classList.remove('map--faded');
     document.querySelector('.notice__form').classList.remove('notice__form--disabled');
 
-    for (var j = 0; j < noticeFormFieldset.length; j++) {
-      noticeFormFieldset[j].removeAttribute('disabled');
+    for (var i = 0; i < noticeFormFieldset.length; i++) {
+      noticeFormFieldset[i].removeAttribute('disabled');
     }
   }
 
-  inputAddress.value = (mainPin.offsetLeft + mainPin.offsetWidth / 2)
+  noticeFormAddress.value = (mainPin.offsetLeft + mainPin.offsetWidth / 2)
     + ', ' + (mainPin.offsetTop + mainPin.offsetHeight + POINTER_HEIGHT);
 
   document.querySelector('.map__pins').appendChild(createPinsFragment(adverts));
+
+  typeChangeHandler();
+
+  roomNumberChangeHandler();
 };
 
 var popupEscPressHandler = function (evt) {
@@ -192,13 +219,68 @@ var popupEscPressHandler = function (evt) {
   }
 };
 
+var typeChangeHandler = function () {
+  var typeName = noticeFormType.value;
+  noticeFormPrice.min = minPrice[typeName];
+  noticeFormPrice.placeholder = minPrice[typeName];
+};
+
+var roomNumberChangeHandler = function () {
+  var selectedOption = noticeFormRoomNumber.value;
+  for (var i = 0; i < capacityOptions.length; i++) {
+    var option = capacityOptions[i];
+    if (selectedOption === '100') {
+      option.disabled = (option.value !== '0');
+      noticeFormCapacity.value = 0;
+    } else {
+      option.disabled = (option.value === '0' || option.value > selectedOption);
+    }
+  }
+};
+
+var formInvalidHandler = function (evt) {
+  evt.target.style.border = '2px solid red';
+};
+
+var formChangeHandler = function (evt) {
+  if (evt.target.checkValidity() === true) {
+    evt.target.style.border = '1px solid #d9d9d3';
+  }
+};
+
+deactivatePage();
+
 var adverts = generateAdverts();
 
-for (var i = 0; i < noticeFormFieldset.length; i++) {
-  noticeFormFieldset[i].setAttribute('disabled', 'disabled');
-}
-
-inputAddress.value = (mainPin.offsetLeft + mainPin.offsetWidth / 2)
-  + ', ' + (mainPin.offsetTop + mainPin.offsetHeight / 2);
-
 mainPin.addEventListener('mouseup', mainPinMouseupHandler);
+
+noticeForm.action = 'https://js.dump.academy/keksobooking';
+
+noticeFormTitle.required = true;
+noticeFormTitle.minLength = 30;
+noticeFormTitle.maxLength = 100;
+
+noticeFormAddress.readOnly = true;
+
+noticeFormPrice.required = true;
+noticeFormPrice.type = 'number';
+noticeFormPrice.max = 1000000;
+noticeFormPrice.placeholder = 1000;
+
+noticeFormType.addEventListener('change', typeChangeHandler);
+
+noticeFormTimeIn.addEventListener('change', function () {
+  noticeFormTimeOut.value = noticeFormTimeIn.value;
+});
+
+noticeFormTimeOut.addEventListener('change', function () {
+  noticeFormTimeIn.value = noticeFormTimeOut.value;
+});
+
+noticeFormCapacity.value = 1;
+
+noticeFormRoomNumber.addEventListener('change', roomNumberChangeHandler);
+
+noticeForm.addEventListener('invalid', formInvalidHandler, true);
+
+noticeForm.addEventListener('change', formChangeHandler);
