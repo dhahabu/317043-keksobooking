@@ -6,9 +6,9 @@ var ESC_KEYCODE = 27;
 
 var template = document.querySelector('template').content;
 var map = document.querySelector('.map');
-var noticeFormFieldset = document.querySelectorAll('.notice__form fieldset');
 var mainPin = document.querySelector('.map__pin--main');
 var noticeForm = document.querySelector('.notice__form');
+var noticeFormFieldset = noticeForm.querySelectorAll('fieldset');
 var noticeFormTitle = noticeForm.querySelector('#title');
 var noticeFormAddress = noticeForm.querySelector('#address');
 var noticeFormType = noticeForm.querySelector('#type');
@@ -18,6 +18,10 @@ var noticeFormTimeOut = noticeForm.querySelector('#timeout');
 var noticeFormRoomNumber = noticeForm.querySelector('#room_number');
 var noticeFormCapacity = noticeForm.querySelector('#capacity');
 var capacityOptions = noticeFormCapacity.querySelectorAll('option');
+
+var mainPinX = mainPin.offsetLeft + mainPin.offsetWidth / 2;
+var mainPinYMiddle = mainPin.offsetTop + mainPin.offsetHeight / 2;
+var mainPinYBottom = mainPin.offsetTop + mainPin.offsetHeight + POINTER_HEIGHT;
 
 var titles = [
   'Большая уютная квартира',
@@ -53,13 +57,30 @@ var minPrice = {
   palace: 10000
 };
 
+var setMainPinAddress = function (x, y) {
+  noticeFormAddress.value = x + ', ' + y;
+};
+
 var deactivatePage = function () {
+  map.classList.add('map--faded');
+  noticeForm.classList.add('notice__form--disabled');
+  setMainPinAddress(mainPinX, mainPinYMiddle);
+  roomNumberChangeHandler();
+
   for (var i = 0; i < noticeFormFieldset.length; i++) {
     noticeFormFieldset[i].disabled = true;
   }
+};
 
-  noticeFormAddress.value = (mainPin.offsetLeft + mainPin.offsetWidth / 2)
-    + ', ' + (mainPin.offsetTop + mainPin.offsetHeight / 2);
+var activatePage = function () {
+  map.classList.remove('map--faded');
+  noticeForm.classList.remove('notice__form--disabled');
+  typeChangeHandler();
+  roomNumberChangeHandler();
+
+  for (var i = 0; i < noticeFormFieldset.length; i++) {
+    noticeFormFieldset[i].disabled = false;
+  }
 };
 
 var mixElements = function (arr) {
@@ -121,6 +142,12 @@ var createPinElement = function (advert) {
   var pinClickHandler = function () {
     closePopup();
     map.insertBefore(createCardElement(advert), document.querySelector('.map__filters-container'));
+
+    document.querySelector('.popup__close').addEventListener('click', function () {
+      closePopup();
+    });
+
+    document.addEventListener('keydown', popupEscPressHandler);
   };
 
   pinElement.addEventListener('click', pinClickHandler);
@@ -176,41 +203,29 @@ var createCardElement = function (advert) {
   cardElement.querySelector('.popup__pictures').replaceChild(createPhotosFragment(advert, cardElement), cardElement.querySelector('.popup__pictures li'));
   cardElement.querySelector('img').src = advert.author.avatar;
 
-  cardElement.querySelector('.popup__close').addEventListener('click', function () {
-    closePopup();
-  });
-
-  document.addEventListener('keydown', popupEscPressHandler);
-
   return cardElement;
 };
 
 var closePopup = function () {
   var popup = document.querySelector('.popup');
-  if (popup !== null) {
-    map.removeChild(popup);
+  if (popup) {
+    popup.remove();
     document.removeEventListener('keydown', popupEscPressHandler);
   }
 };
 
+var setDefoltBorder = function (element) {
+  element.style.border = '1px solid #d9d9d3';
+};
+
 var mainPinMouseupHandler = function () {
   if (map.classList.contains('map--faded')) {
-    map.classList.remove('map--faded');
-    document.querySelector('.notice__form').classList.remove('notice__form--disabled');
-
-    for (var i = 0; i < noticeFormFieldset.length; i++) {
-      noticeFormFieldset[i].removeAttribute('disabled');
-    }
+    activatePage();
   }
 
-  noticeFormAddress.value = (mainPin.offsetLeft + mainPin.offsetWidth / 2)
-    + ', ' + (mainPin.offsetTop + mainPin.offsetHeight + POINTER_HEIGHT);
+  setMainPinAddress(mainPinX, mainPinYBottom);
 
   document.querySelector('.map__pins').appendChild(createPinsFragment(adverts));
-
-  typeChangeHandler();
-
-  roomNumberChangeHandler();
 };
 
 var popupEscPressHandler = function (evt) {
@@ -226,14 +241,16 @@ var typeChangeHandler = function () {
 };
 
 var roomNumberChangeHandler = function () {
-  var selectedOption = noticeFormRoomNumber.value;
-  for (var i = 0; i < capacityOptions.length; i++) {
-    var option = capacityOptions[i];
-    if (selectedOption === '100') {
-      option.disabled = (option.value !== '0');
-      noticeFormCapacity.value = 0;
-    } else {
-      option.disabled = (option.value === '0' || option.value > selectedOption);
+  var roomNumberValue = noticeFormRoomNumber.value;
+  if (roomNumberValue === '100') {
+    noticeFormCapacity.value = '0';
+    for (var i = 0; i < capacityOptions.length; i++) {
+      capacityOptions[i].disabled = (capacityOptions[i].value !== '0');
+    }
+  } else {
+    noticeFormCapacity.value = '1';
+    for (i = 0; i < capacityOptions.length; i++) {
+      capacityOptions[i].disabled = (capacityOptions[i].value === '0' || capacityOptions[i].value > roomNumberValue);
     }
   }
 };
@@ -243,8 +260,20 @@ var formInvalidHandler = function (evt) {
 };
 
 var formChangeHandler = function (evt) {
-  if (evt.target.checkValidity() === true) {
-    evt.target.style.border = '1px solid #d9d9d3';
+  if (evt.target.checkValidity()) {
+    setDefoltBorder(evt.target);
+  }
+};
+
+var formResetHandler = function () {
+  deactivatePage();
+  closePopup();
+  setDefoltBorder(noticeFormTitle);
+  setDefoltBorder(noticeFormPrice);
+
+  var pins = document.querySelectorAll('.map__pin');
+  for (var i = 1; i < pins.length; i++) {
+    pins[i].remove();
   }
 };
 
@@ -277,10 +306,10 @@ noticeFormTimeOut.addEventListener('change', function () {
   noticeFormTimeIn.value = noticeFormTimeOut.value;
 });
 
-noticeFormCapacity.value = 1;
-
 noticeFormRoomNumber.addEventListener('change', roomNumberChangeHandler);
 
 noticeForm.addEventListener('invalid', formInvalidHandler, true);
 
 noticeForm.addEventListener('change', formChangeHandler);
+
+noticeForm.addEventListener('reset', formResetHandler);
