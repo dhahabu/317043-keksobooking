@@ -62,12 +62,22 @@ var setMainPinAddress = function (x, y) {
 };
 
 var deactivatePage = function () {
+  noticeForm.reset();
   map.classList.add('map--faded');
   noticeForm.classList.add('notice__form--disabled');
   setMainPinAddress(mainPinX, mainPinYMiddle);
+  typeChangeHandler();
   roomNumberChangeHandler();
+  closePopup();
+  setBorderColor(noticeFormTitle, defoltBorder);
+  setBorderColor(noticeFormPrice, defoltBorder);
 
-  for (var i = 0; i < noticeFormFieldset.length; i++) {
+  var pins = document.querySelectorAll('.map__pin');
+  for (var i = 1; i < pins.length; i++) {
+    pins[i].remove();
+  }
+
+  for (i = 0; i < noticeFormFieldset.length; i++) {
     noticeFormFieldset[i].disabled = true;
   }
 };
@@ -214,10 +224,6 @@ var closePopup = function () {
   }
 };
 
-var setDefoltBorder = function (element) {
-  element.style.border = '1px solid #d9d9d3';
-};
-
 var mainPinMouseupHandler = function () {
   if (map.classList.contains('map--faded')) {
     activatePage();
@@ -255,33 +261,26 @@ var roomNumberChangeHandler = function () {
   }
 };
 
-var formInvalidHandler = function (evt) {
-  evt.target.style.border = '2px solid red';
+var defoltBorder = '1px solid #d9d9d3';
+var redBorder = '2px solid red';
+
+var setBorderColor = function (element, color) {
+  element.style.border = color;
 };
 
 var formChangeHandler = function (evt) {
-  if (evt.target.checkValidity()) {
-    setDefoltBorder(evt.target);
-  }
+  var borderColor = evt.target.checkValidity() ? defoltBorder : redBorder;
+  setBorderColor(evt.target, borderColor);
 };
 
-var formResetHandler = function () {
+var resetClickHandler = function (evt) {
+  evt.preventDefault();
   deactivatePage();
-  closePopup();
-  setDefoltBorder(noticeFormTitle);
-  setDefoltBorder(noticeFormPrice);
-
-  var pins = document.querySelectorAll('.map__pin');
-  for (var i = 1; i < pins.length; i++) {
-    pins[i].remove();
-  }
 };
 
 deactivatePage();
 
 var adverts = generateAdverts();
-
-mainPin.addEventListener('mouseup', mainPinMouseupHandler);
 
 noticeForm.action = 'https://js.dump.academy/keksobooking';
 
@@ -296,6 +295,10 @@ noticeFormPrice.type = 'number';
 noticeFormPrice.max = 1000000;
 noticeFormPrice.placeholder = 1000;
 
+mainPin.addEventListener('mouseup', mainPinMouseupHandler);
+
+noticeForm.addEventListener('change', formChangeHandler);
+
 noticeFormType.addEventListener('change', typeChangeHandler);
 
 noticeFormTimeIn.addEventListener('change', function () {
@@ -308,8 +311,6 @@ noticeFormTimeOut.addEventListener('change', function () {
 
 noticeFormRoomNumber.addEventListener('change', roomNumberChangeHandler);
 
-noticeForm.addEventListener('invalid', formInvalidHandler, true);
-
 noticeForm.addEventListener('change', formChangeHandler);
 
-noticeForm.addEventListener('reset', formResetHandler);
+noticeForm.querySelector('.form__reset').addEventListener('click', resetClickHandler);
